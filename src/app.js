@@ -37,18 +37,25 @@ const msgSchema = joi.object({
 app.post('/participants', async (req, res) => {
     let {name} = req.body;
     const validation = userSchema.validate(req.body, {abortEarly: false});
-    name = stripHtml(name).result.trim();
+    
 
     try {
-        const usedName = await db.collection("participants").findOne({name})
-        const message = { 
-            from: name,
-            to: 'Todos',
-            text: 'entra na sala...',
-            type: 'status',
-            time: timeNow
-            }
-
+        if (name) {
+            name = stripHtml(name).result.trim();
+            const usedName = await db.collection("participants").findOne({name})
+            const message = { 
+                from: name,
+                to: 'Todos',
+                text: 'entra na sala...',
+                type: 'status',
+                time: timeNow
+                }
+        }
+        
+        if(!name) {
+            return res.sendStatus(422);
+        }
+            
         if(usedName) {
             return res.status(409).send('Nome já cadastrado');
         }
