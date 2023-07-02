@@ -249,6 +249,6 @@ setInterval( async () => {
     } catch (err) {
         res.status(500).send(err.message);
     }
-}, 150000);
+}, 15000);
 
 app.listen(5000);
