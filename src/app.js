@@ -42,16 +42,16 @@ app.post('/participants', async (req, res) => {
     try {
         if (name) {
             name = stripHtml(name).result.trim();
-            const usedName = await db.collection("participants").findOne({name})
-            const message = { 
-                from: name,
-                to: 'Todos',
-                text: 'entra na sala...',
-                type: 'status',
-                time: timeNow
-                }
         }
-        
+        const usedName = await db.collection("participants").findOne({name})
+        const message = { 
+            from: name,
+            to: 'Todos',
+            text: 'entra na sala...',
+            type: 'status',
+            time: timeNow
+            }
+
         if(!name) {
             return res.sendStatus(422);
         }
@@ -88,21 +88,30 @@ app.get('/participants', async (req, res) => {
 
 app.post('/messages', async (req, res) => {
     let {to, text, type} = req.body;
-    to = stripHtml(to).result.trim();
-    text = stripHtml(text).result.trim();
-    type = stripHtml(type).result.trim();
     const user = req.headers.user;
     const online = await db.collection('participants').findOne({name: user});
-    const message = {
-        to,
-        text,
-        type,
-        from: user,
-        time: timeNow
-    }
-    const validation = msgSchema.validate(message, {abortEarly: false});
+
 
     try {
+        if (to && text && type) {
+            to = stripHtml(to).result.trim();
+            text = stripHtml(text).result.trim();
+            type = stripHtml(type).result.trim();
+        }
+
+        const message = {
+            to,
+            text,
+            type,
+            from: user,
+            time: timeNow
+        }
+        const validation = msgSchema.validate(message, {abortEarly: false});
+        
+        if (!to || !text || !type) {
+            return res.sendStatus(422);
+        }
+
         if (!online) {
             return res.status(422).send('Usuário não está on-line')
         }
