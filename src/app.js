@@ -156,6 +156,29 @@ app.post('/status', async (req, res) => {
     }
 });
 
+app.delete('/messages/:ID_DA_MENSAGEM', async (req, res) => {
+    const user = req.headers.user;
+    let id = req.params.ID_DA_MENSAGEM;
+    let toDelete = await db.collection('messages').findOne({_id: new ObjectId(id)});
+
+    try {
+        if (!toDelete) {
+            return res.sendStatus(404);
+        }
+        
+        if (toDelete.from !== user || toDelete.type === 'status') {
+            return res.sendStatus(401);
+        }
+
+        await db.collection('messages').deleteOne({_id: new ObjectId(id)});
+
+        res.status(200).send('Mensagem deletada com sucesso');
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+
+})
+
 setInterval( async () => {
     const time = Date.now() - 10000;
     let users = await db.collection('participants').find({lastStatus: {$lt: time}}).toArray();
@@ -179,6 +202,6 @@ setInterval( async () => {
     } catch (err) {
         res.status(500).send(err.message);
     }
-}, 15000);
+}, 150000);
 
 app.listen(5000);
