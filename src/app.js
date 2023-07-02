@@ -21,7 +21,7 @@ mongoClient.connect()
 const timeNow = dayjs().format('HH:mm:ss');
 
 const userSchema = joi.object({
-    name: joi.string().required()
+    name: joi.string().required(),
 })
 
 const msgSchema = joi.object({
@@ -109,7 +109,7 @@ app.get('/messages', async (req, res) => {
     const user = req.headers.user;
     const online = await db.collection('participants').findOne({name: user});
     let messages = await db.collection('messages').find({$or: [{to: "Todos"}, {to: user}, {from: user}]}).toArray();
-    let limit = Number(req.query.limit);
+    let {limit} = req.query;
     
     messages = messages.reverse();
     try {
@@ -117,19 +117,33 @@ app.get('/messages', async (req, res) => {
             return res.status(422).send('O usuário não está on-line');
         }
 
-        if (limit || limit === 0 || isNaN(limit)) {
+        if (limit === undefined || limit === null) {
+            res.status(200).send(messages);
+        } else if (limit || limit === 0 || isNaN(limit)) {
             if (limit === 0 || limit < 0 || isNaN(limit)) {
                 return res.status(422).send('O valor de limit é inválido')
-            } else if (limit >= messages.length) {
-                return res.status(200).send(messages);
-            } else {
-                messages = messages.slice(0, limit);
+            } 
+            if (limit >= messages.length) {
                 return res.status(200).send(messages);
             }
-        } else {
+            messages = messages.slice(0, limit);
             return res.status(200).send(messages);
         }
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+})
 
+app.post('/status', async (req, res) => {
+    const user = req.headers.user;
+    const online = await db.collection('participants').findOne({name: user});
+
+    try {
+        if (!user || !online) {
+            return res.status(404);
+        }
+        await db.collection('participants').findOneAndUpdate({name: user}, {$set: {lastStatus: Date.now()}});
+        res.sendStatus(200);
     } catch (err) {
         return res.status(500).send(err.message);
     }
