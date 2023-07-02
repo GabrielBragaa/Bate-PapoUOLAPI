@@ -105,4 +105,34 @@ app.post('/messages', async (req, res) => {
     }
 })
 
+app.get('/messages', async (req, res) => {
+    const user = req.headers.user;
+    const online = await db.collection('participants').findOne({name: user});
+    let messages = await db.collection('messages').find({$or: [{to: "Todos"}, {to: user}, {from: user}]}).toArray();
+    let limit = Number(req.query.limit);
+    
+    messages = messages.reverse();
+    try {
+        if (!online) {
+            return res.status(422).send('O usuário não está on-line');
+        }
+
+        if (limit || limit === 0 || isNaN(limit)) {
+            if (limit === 0 || limit < 0 || isNaN(limit)) {
+                return res.status(422).send('O valor de limit é inválido')
+            } else if (limit >= messages.length) {
+                return res.status(200).send(messages);
+            } else {
+                messages = messages.slice(0, limit);
+                return res.status(200).send(messages);
+            }
+        } else {
+            return res.status(200).send(messages);
+        }
+
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+})
+
 app.listen(5000);
