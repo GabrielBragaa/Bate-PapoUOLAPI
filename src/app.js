@@ -1,5 +1,5 @@
 import express from 'express';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import dotenv from 'dotenv';
 import joi from 'joi';
 import cors from 'cors';
@@ -74,7 +74,7 @@ app.get('/participants', async (req, res) => {
     } catch (err) {
         console.log(err.message)
     }
-})
+});
 
 app.post('/messages', async (req, res) => {
     let {to, text, type} = req.body;
@@ -103,7 +103,7 @@ app.post('/messages', async (req, res) => {
     } catch (err) {
         return res.status(500);
     }
-})
+});
 
 app.get('/messages', async (req, res) => {
     const user = req.headers.user;
@@ -132,7 +132,7 @@ app.get('/messages', async (req, res) => {
     } catch (err) {
         return res.status(500).send(err.message);
     }
-})
+});
 
 app.post('/status', async (req, res) => {
     const user = req.headers.user;
@@ -147,6 +147,31 @@ app.post('/status', async (req, res) => {
     } catch (err) {
         return res.status(500).send(err.message);
     }
-})
+});
+
+setInterval( async () => {
+    const time = Date.now() - 10000;
+    let users = await db.collection('participants').find({lastStatus: {$lt: time}}).toArray();
+
+    try {
+        users.forEach(async user => {
+            try {
+                await db.collection('participants').deleteOne({_id: new ObjectId(user._id)});
+                const exitMsg = {
+                    from: user.name,
+                    to: 'Todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time: timeNow
+                }
+                await db.collection('messages').insertOne(exitMsg);
+            } catch (err) {
+                res.status(500).send(err.message);
+            }
+        })
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+}, 15000);
 
 app.listen(5000);
