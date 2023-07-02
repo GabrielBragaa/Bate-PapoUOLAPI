@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import joi from 'joi';
 import cors from 'cors';
 import dayjs from 'dayjs';
-import {strict as assert} from 'assert';
 import { stripHtml } from 'string-strip-html';
 
 
@@ -177,6 +176,54 @@ app.delete('/messages/:ID_DA_MENSAGEM', async (req, res) => {
         res.status(500).send(err.message);
     }
 
+})
+
+app.put('/messages/:ID_DA_MENSAGEM', async (req, res) => {
+    const user = req.headers.user;
+    let {to, text, type} = req.body;
+    to = stripHtml(to).result.trim();
+    text = stripHtml(text).result.trim();
+    type = stripHtml(type).result.trim();
+    let online = await db.collection('participants').findOne({name: user});
+    let newMessage = {
+        to,
+        text,
+        type,
+        from: user
+    }
+    const validation = msgSchema.validate(newMessage, {abortEarly: false});
+    let id = req.params.ID_DA_MENSAGEM;
+    let toChange = await db.collection('messages').findOne({_id: new ObjectId(id)});
+
+
+    try {
+        if (!online) {
+            return res.sendStatus(422);
+        }
+
+        if (validation.error) {
+            const errors = validation.error.details.map(detail => detail.message);
+            return res.status(422).send(errors);
+        }
+
+        if (!toChange) {
+            return res.sendStatus(404);
+        }
+
+        if (toChange.from !== user) {
+            return res.sendStatus(401);
+        }
+
+        let result = await db.collection('messages').updateOne({_id: new ObjectId(id)}, {$set: newMessage});
+        res.sendStatus(200);
+
+        if (result.matchedCount === 0) {
+            return res.sendStatus(404);
+        }
+
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
 })
 
 setInterval( async () => {
