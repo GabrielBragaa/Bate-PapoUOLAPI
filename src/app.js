@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import joi from 'joi';
 import cors from 'cors';
 import dayjs from 'dayjs';
+import {strict as assert} from 'assert';
+import { stripHtml } from 'string-strip-html';
+
 
 const app = express();
 app.use(express.json());
@@ -33,8 +36,9 @@ const msgSchema = joi.object({
 })
 
 app.post('/participants', async (req, res) => {
-    const {name} = req.body;
+    let {name} = req.body;
     const validation = userSchema.validate(req.body, {abortEarly: false});
+    name = stripHtml(name).result.trim();
 
     try {
         const usedName = await db.collection("participants").findOne({name})
@@ -78,6 +82,9 @@ app.get('/participants', async (req, res) => {
 
 app.post('/messages', async (req, res) => {
     let {to, text, type} = req.body;
+    to = stripHtml(to).result.trim();
+    text = stripHtml(text).result.trim();
+    type = stripHtml(type).result.trim();
     const user = req.headers.user;
     const online = await db.collection('participants').findOne({name: user});
     const message = {
