@@ -142,8 +142,8 @@ app.get('/messages', async (req, res) => {
         if (limit === undefined || limit === null) {
             res.status(200).send(messages);
         } else if (limit || limit === 0 || isNaN(limit)) {
-            if (limit === 0 || limit < 0 || isNaN(limit)) {
-                return res.status(422).send('O valor de limit é inválido')
+            if (limit === '0' || limit < 0 || isNaN(limit)) {
+                return res.sendStatus(422);
             } 
             if (limit >= messages.length) {
                 return res.status(200).send(messages);
@@ -162,7 +162,7 @@ app.post('/status', async (req, res) => {
 
     try {
         if (!user || !online) {
-            return res.status(404);
+            return res.sendStatus(404);
         }
         await db.collection('participants').findOneAndUpdate({name: user}, {$set: {lastStatus: Date.now()}});
         res.sendStatus(200);
@@ -197,22 +197,31 @@ app.delete('/messages/:ID_DA_MENSAGEM', async (req, res) => {
 app.put('/messages/:ID_DA_MENSAGEM', async (req, res) => {
     const user = req.headers.user;
     let {to, text, type} = req.body;
-    to = stripHtml(to).result.trim();
-    text = stripHtml(text).result.trim();
-    type = stripHtml(type).result.trim();
     let online = await db.collection('participants').findOne({name: user});
-    let newMessage = {
-        to,
-        text,
-        type,
-        from: user
-    }
-    const validation = msgSchema.validate(newMessage, {abortEarly: false});
     let id = req.params.ID_DA_MENSAGEM;
     let toChange = await db.collection('messages').findOne({_id: new ObjectId(id)});
 
-
     try {
+        
+        if (to && text && type) {
+            to = stripHtml(to).result.trim();
+            text = stripHtml(text).result.trim();
+            type = stripHtml(type).result.trim();
+        }
+
+        let newMessage = {
+            to,
+            text,
+            type,
+            from: user
+        }
+        
+        const validation = msgSchema.validate(newMessage, {abortEarly: false});
+
+        if (!to || !text || !type) {
+            res.sendStatus(422);
+        }
+
         if (!online) {
             return res.sendStatus(422);
         }
