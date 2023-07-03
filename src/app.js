@@ -40,9 +40,14 @@ app.post('/participants', async (req, res) => {
     
 
     try {
+        if (typeof name !== 'string') {
+            return res.sendStatus(422);
+        }
+        
         if (name) {
             name = stripHtml(name).result.trim();
         }
+
         const usedName = await db.collection("participants").findOne({name})
         const message = { 
             from: name,
